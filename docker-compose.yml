@@ -1,0 +1,51 @@
+version: "3.7"
+services:
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "true"
+    ports:
+      - "${BIND_IP_ADDR:-127.0.0.1}:3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+  frontend:
+    build:
+      context: Dockerfile.d/
+      dockerfile: frontend.Dockerfile
+      target: development
+    working_dir: /workspace
+    volumes:
+      - ./frontend:/workspace
+      - ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK}
+    ports:
+      - "${BIND_IP_ADDR:-127.0.0.1}:3000:3000"
+    user: "${UID:-0}:${GID:-0}"
+    environment:
+      - SSH_AUTH_SOCK
+      - BFF_ENDPOINT_GRAPHQL=http://${BIND_IP_ADDR:-127.0.0.1}:4000/graphql
+    command: >
+      bash -c
+      "npm install
+      && npm run dev"
+  bff:
+    build:
+      context: Dockerfile.d/
+      dockerfile: bff.Dockerfile
+      target: development
+    working_dir: /workspace
+    volumes:
+      - ./bff:/workspace
+      - ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK}
+    ports:
+      - "${BIND_IP_ADDR:-127.0.0.1}:4000:4000"
+    user: "${UID:-0}:${GID:-0}"
+    environment:
+      - SSH_AUTH_SOCK
+      - PORT=4000
+    command: >
+      bash -c
+      "npm install
+      && npm run start"
+volumes:
+  mysql-data:
+    driver: local
